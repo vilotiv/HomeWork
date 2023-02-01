@@ -436,13 +436,6 @@ xfsrestore: Restore Status: SUCCESS
 ```
 [root@lvm /]# vi /etc/fstab
 [root@lvm /]# cat /etc/fstab
-#
-# /etc/fstab
-# Created by anaconda on Sat May 12 18:50:26 2018
-#
-# Accessible filesystems, by reference, are maintained under '/dev/disk'
-# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
-#
 /dev/mapper/VolGroup00-LogVolNEW		/       xfs     defaults 0 0
 UUID=570897ca-e759-4c81-90cf-389da6eee4cc       /boot   xfs     defaults 0 0
 /dev/mapper/VolGroup00-LogVol01                 swap    swap    defaults 0 0
@@ -657,14 +650,13 @@ mount /dev/mapper/VolGroup00-LogVolNewHOME /mnt/newhome
 ```
 
 ```
-cp -a /home/* /mnt/newhome
+cp -aR /home/* /mnt/newhome
 ```
 
 ###### Правим fstab
 ```
 [root@lvm newhome]# vi /etc/fstab
 [root@lvm newhome]# cat /etc/fstab
-
 /dev/mapper/VolGroup00-LogVolNewHOME		/home	ext4	defaults 0 0
 /dev/mapper/VolGroup00-LogVolNEW                /       xfs     defaults 0 0
 UUID=570897ca-e759-4c81-90cf-389da6eee4cc       /boot   xfs     defaults 0 0
@@ -785,7 +777,6 @@ L-VolGroupVAR-LogVolNewVarMirror_rimage_1 253:6    0  816M  0 lvm
   L-VolGroupVAR-LogVolNewVarMirror        253:7    0  816M  0 lvm  /var
 ```
 
-###### Для себя
 ```
 [root@lvm vagrant]# lvs
   LV                 VG          Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
