@@ -28,36 +28,54 @@ yum install lvm2 xfsdump -y
 
 ###### Подготовим временный раздел для корневого тома. Сперва смотрим какие разделы есть
 ```
-[root@lvm /]# lsblk
+[root@lvm ~]# lsblk
 NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
-sda                       8:0    0   40G  0 disk
-+-sda1                    8:1    0    1M  0 part
-+-sda2                    8:2    0    1G  0 part /boot
-L-sda3                    8:3    0   39G  0 part
-  +-VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  /
-  L-VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
-sdb                       8:16   0   10G  0 disk
-sdc                       8:32   0    2G  0 disk
-sdd                       8:48   0    1G  0 disk
-sde                       8:64   0    1G  0 disk
+sda                       8:0    0   40G  0 disk 
+├─sda1                    8:1    0    1M  0 part 
+├─sda2                    8:2    0    1G  0 part /boot
+└─sda3                    8:3    0   39G  0 part 
+  ├─VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  /
+  └─VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+sdb                       8:16   0   10G  0 disk 
+sdc                       8:32   0    2G  0 disk 
+sdd                       8:48   0    1G  0 disk 
+sde                       8:64   0    1G  0 disk 
 ```
 
 ###### Используем для этого sdb, т.к. самый большой свободный диск. Делаем разметку диска (Physical Volume)
 ```
 [root@lvm /]# pvcreate /dev/sdb
   Physical volume "/dev/sdb" successfully created.
+  
+  pvs
+  PV         VG         Fmt  Attr PSize   PFree 
+  /dev/sda3  VolGroup00 lvm2 a--  <38.97g     0 
+  /dev/sdb              lvm2 ---   10.00g 10.00g
+
 ```
 
 ###### Создаем Volume Group (группу томов)
 ```
 [root@lvm /]# vgcreate vg_tmp_root /dev/sdb
   Volume group "vg_tmp_root" successfully created
+  
+vgs
+  VG          #PV #LV #SN Attr   VSize   VFree  
+  VolGroup00    1   2   0 wz--n- <38.97g      0 
+  vg_tmp_root   1   0   0 wz--n- <10.00g <10.00g  
 ```
 
 ###### Создаем логический раздел
 ```
 [root@lvm /]# lvcreate -n lv_tmp_root -l +100%FREE /dev/vg_tmp_root
   Logical volume "lv_tmp_root" created.
+  
+  lvs
+  LV          VG          Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  LogVol00    VolGroup00  -wi-ao---- <37.47g                                                    
+  LogVol01    VolGroup00  -wi-ao----   1.50g                                                    
+  lv_tmp_root vg_tmp_root -wi-a----- <10.00g                                                    
+
 ```
 
 ###### Проверяю
@@ -121,14 +139,6 @@ realtime =none                   extsz=4096   blocks=0, rtextents=0
 mount /dev/vg_tmp_root/lv_tmp_root /mnt
 ```
 
-###### Напоминаю себе где корневой раздел
-```
-[root@lvm vagrant]# lsblk | grep /
-+-sda2                      8:2    0    1G  0 part /boot
-  +-vg_tmp_root-lv_tmp_root   253:0    0 37.5G  0 lvm  /
-L-vg_tmp_root-lv_tmp_root 253:2    0   10G  0 lvm  /mnt
-```
-
 ###### Смотрю полный путь устройства (dev) для удобства копирования
 ```
 [root@lvm ~]# lvdisplay | grep 'LV Path'
@@ -140,47 +150,47 @@ L-vg_tmp_root-lv_tmp_root 253:2    0   10G  0 lvm  /mnt
 ###### Копирую систему на временный раздел
 ```
 [root@lvm ~]# xfsdump -J - /dev/VolGroup00/LogVol00 | xfsrestore -J - /mnt
-xfsrestore: using file dump (drive_simple) strategy
-xfsrestore: version 3.1.7 (dump format 3.0)
 xfsdump: using file dump (drive_simple) strategy
 xfsdump: version 3.1.7 (dump format 3.0)
 xfsdump: level 0 dump of lvm:/
-xfsdump: dump date: Wed Aug  7 15:06:55 2019
-xfsdump: session id: 5d680213-7eb4-4791-a1e0-4f358c276389
+xfsdump: dump date: Mon Jan 30 20:17:02 2023
+xfsdump: session id: 9a5fb75c-b297-43ac-ba13-804539dc6739
 xfsdump: session label: ""
+xfsrestore: using file dump (drive_simple) strategy
+xfsrestore: version 3.1.7 (dump format 3.0)
 xfsrestore: searching media for dump
 xfsdump: ino map phase 1: constructing initial dump list
 xfsdump: ino map phase 2: skipping (no pruning necessary)
 xfsdump: ino map phase 3: skipping (only one dump stream)
 xfsdump: ino map construction complete
-xfsdump: estimated dump size: 828731264 bytes
+xfsdump: estimated dump size: 852505856 bytes
 xfsdump: creating dump session media file 0 (media 0, file 0)
 xfsdump: dumping ino map
 xfsdump: dumping directories
 xfsrestore: examining media file 0
-xfsrestore: dump description:
+xfsrestore: dump description: 
 xfsrestore: hostname: lvm
 xfsrestore: mount point: /
 xfsrestore: volume: /dev/mapper/VolGroup00-LogVol00
-xfsrestore: session time: Wed Aug  7 15:06:55 2019
+xfsrestore: session time: Mon Jan 30 20:17:02 2023
 xfsrestore: level: 0
 xfsrestore: session label: ""
 xfsrestore: media label: ""
 xfsrestore: file system id: b60e9498-0baa-4d9f-90aa-069048217fee
-xfsrestore: session id: 5d680213-7eb4-4791-a1e0-4f358c276389
-xfsrestore: media id: 96b50f0e-db3d-4290-a50c-6a5bc429d2d2
+xfsrestore: session id: 9a5fb75c-b297-43ac-ba13-804539dc6739
+xfsrestore: media id: 3ff4555f-7985-44b9-b1f5-83ad386da98b
 xfsrestore: searching media for directory dump
 xfsrestore: reading directories
 xfsdump: dumping non-directory files
-xfsrestore: 3133 directories and 27116 entries processed
+xfsrestore: 2732 directories and 23763 entries processed
 xfsrestore: directory post-processing
 xfsrestore: restoring non-directory files
 xfsdump: ending media file
-xfsdump: media file size 800414960 bytes
-xfsdump: dump size (non-dir files) : 785139384 bytes
-xfsdump: dump complete: 31 seconds elapsed
+xfsdump: media file size 829427976 bytes
+xfsdump: dump size (non-dir files) : 816172696 bytes
+xfsdump: dump complete: 15 seconds elapsed
 xfsdump: Dump Status: SUCCESS
-xfsrestore: restore complete: 32 seconds elapsed
+xfsrestore: restore complete: 15 seconds elapsed
 xfsrestore: Restore Status: SUCCESS
 ```
 
@@ -197,18 +207,12 @@ xfsrestore: Restore Status: SUCCESS
 
 ###### Правим fstab
 ```
-[root@lvm /]# nano /etc/fstab
+[root@lvm /]# vi /etc/fstab
 [root@lvm /]# cat /etc/fstab
-#
-# /etc/fstab
-# Created by anaconda on Sat May 12 18:50:26 2018
-#
-# Accessible filesystems, by reference, are maintained under '/dev/disk'
-# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
-#
-/dev/mapper/vg_tmp_root-lv_tmp_root 		/	xfs	defaults 0 0
-UUID=570897ca-e759-4c81-90cf-389da6eee4cc 	/boot	xfs     defaults 0 0
-/dev/mapper/VolGroup00-LogVol01 		swap	swap    defaults 0 0
+/dev/mapper/vg_tmp_root-lv_tmp_root /                   xfs     defaults        0 0
+UUID=570897ca-e759-4c81-90cf-389da6eee4cc /boot         xfs     defaults        0 0
+/dev/mapper/VolGroup00-LogVol01 swap                    swap    defaults        0 0
+
 ```
 
 ###### Делаем новый initramfs
@@ -430,7 +434,7 @@ xfsrestore: Restore Status: SUCCESS
 ```
 
 ```
-[root@lvm /]# nano /etc/fstab
+[root@lvm /]# vi /etc/fstab
 [root@lvm /]# cat /etc/fstab
 #
 # /etc/fstab
@@ -569,7 +573,7 @@ Do you really want to remove active logical volume vg_tmp_root/lv_tmp_root? [y/n
   Labels on physical volume "/dev/sdb" successfully wiped.
 ```
 
-###### Смотрю что натворил
+###### результат
 ```
 [root@lvm vagrant]# vgdisplay
   --- Volume group ---
@@ -614,7 +618,7 @@ Do you really want to remove active logical volume vg_tmp_root/lv_tmp_root? [y/n
   Block device           253:0
 ```
 
-#### Перенос корневого раздела завершен, приступаю к другой части ДЗ3
+#### Перенос корневого раздела завершен
 
 ###### Создаем раздел под /home
 ```
@@ -658,15 +662,9 @@ cp -a /home/* /mnt/newhome
 
 ###### Правим fstab
 ```
-[root@lvm newhome]# nano /etc/fstab
+[root@lvm newhome]# vi /etc/fstab
 [root@lvm newhome]# cat /etc/fstab
-#
-# /etc/fstab
-# Created by anaconda on Sat May 12 18:50:26 2018
-#
-# Accessible filesystems, by reference, are maintained under '/dev/disk'
-# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
-#
+
 /dev/mapper/VolGroup00-LogVolNewHOME		/home	ext4	defaults 0 0
 /dev/mapper/VolGroup00-LogVolNEW                /       xfs     defaults 0 0
 UUID=570897ca-e759-4c81-90cf-389da6eee4cc       /boot   xfs     defaults 0 0
@@ -719,7 +717,6 @@ sde                            8:64   0    1G  0 disk
 
 
 #### Перенесем /var в отдельный раздел ext3 (зеркальный)
-###### Создал LogVolNewVarMirror (лог не сохранил), продолжаю
 ```
 [root@lvm mnt]# mkfs.ext3 /dev/mapper/VolGroupVAR-LogVolNewVarMirror
 mke2fs 1.42.9 (28-Dec-2013)
@@ -748,20 +745,13 @@ mount /dev/mapper/VolGroupVAR-LogVolNewVarMirror /mnt/newvar
 ```
 
 ```
-cp -a /var/* /mnt/newvar
+cp -aR /var/* /mnt/newvar
 ```
 
 ###### Правим fstab
 ```
-[root@lvm newhome]# nano /etc/fstab
+[root@lvm newhome]# vi /etc/fstab
 [root@lvm newhome]# cat /etc/fstab
-#
-# /etc/fstab
-# Created by anaconda on Sat May 12 18:50:26 2018
-#
-# Accessible filesystems, by reference, are maintained under '/dev/disk'
-# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
-#
 /dev/mapper/VolGroupVAR-LogVolNewVarMirror	/var	ext3	defaults 0 0
 /dev/mapper/VolGroup00-LogVolNewHOME		/home	ext4	defaults 0 0
 /dev/mapper/VolGroup00-LogVolNEW                /       xfs     defaults 0 0
@@ -869,9 +859,6 @@ file1  file10  file2  file21  file22  file23  file24  file25  file26  file27  fi
 
 ###### Перезагружаемся
 ```
-D:\Otus\3.LVM>Vagrant ssh
-Last login: Wed Aug  7 18:23:11 2019 from 10.0.2.2
-[vagrant@lvm ~]$ sudo su
 [root@lvm vagrant]# ls /home
 file1   file11  file13  file15  file17  file19  file20  file22  file24  file26  file28  file3   file4  file6  file8  lost+found
 file10  file12  file14  file16  file18  file2   file21  file23  file25  file27  file29  file30  file5  file7  file9  vagrant
@@ -884,17 +871,13 @@ file10  file12  file14  file16  file18  file2   file21  file23  file25  file27  
 
 
 ###### _* на нашей куче дисков попробовать поставить btrfs/zfs - с кешем, снэпшотами - разметить здесь каталог /opt_
-###### _Критерии оценки: основная часть обязательна_
-###### _задание со звездочкой +1 балл_
 
 ###### Устанавливаем zfs
 ```
-yum install http://download.zfsonlinux.org/epel/zfs-release.el7_6.noarch.rpm
-sed -i '12s/enabled=0/enabled=1/' /etc/yum.repos.d/zfs.repo
 yum install zfs -y
 ```
 
-###### Поднимаем lvm на двух оставшихся дисках (хочу задействова все что есть)
+###### Поднимаем lvm на двух оставшихся дисках
 ```
 [root@lvm vagrant]# pvcreate /dev/sdb
   Physical volume "/dev/sdb" successfully created.
@@ -1045,12 +1028,7 @@ optfile1   optfile11  optfile13  optfile15  optfile17  optfile19  optfile20  opt
 
 #### Файлы успешно восстановлены средствами снапшота зфс
 
-###### Для себя
-###### _When trying to cache the read operations, our objective changes. Instead of making sure that we get good performance, as well as reliable transactions, now ZFS’ motive shifts to predicting the future. This means, caching the information that an application would require in the near future, while discarding the ones that will be needed furthest ahead in time._
-###### _To do this a part of main memory is used for caching data that was either used recently or the data is being accessed most frequently. That’s where the term Adaptive Replacement Cache (ARC) comes from. In addition to traditional read caching, where only the most recently used objects are cached, the ARC also pays attention to how often the data has been accessed._
-###### _L2ARC, or Level 2 ARC, is an extension to the ARC. If you have a dedicated storage device to act as your L2ARC, it will store all the data that is not too important to stay in the ARC but at the same time that data is useful enough to merit a place in the slower-than-memory NVMe device._
-
-#### Пробую поиграться с кэшем, попробую перенести l2arc кэш на раздел lvm в sda3 (представим что это супер пупер быстрый ssd)
+#### Попробую перенести l2arc кэш на раздел lvm в sda3 (представим что это супер пупер быстрый ssd)
 ```
 [root@lvm opt]# lvcreate -n LogVolOPTcache -L 4G /dev/VolGroup00
   Logical volume "LogVolOPTcache" created.
@@ -1080,4 +1058,4 @@ cache                            -      -      -      -      -      -
 ---------------------------  -----  -----  -----  -----  -----  -----
 ```
 
-###### Вроде всё...
+###### Готово...
