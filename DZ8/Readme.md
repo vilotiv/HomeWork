@@ -10,24 +10,24 @@
 ##### Получил доступ к системе двумя способами. Первый способ - использование командной строки при загрузке в grub. Попробовал на системе Alt Server 10.
 ##### 1) Перезагрузил ВМ, в Grub2 при окне выбора ядра нажал "е"
 ##### 2) В конце строки, начинающийся с "linux /vmlinuz ...", дописал init=/bin/bash
-- [bin-bash.JPG]
+- ![bin-bash.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/bin-bash.JPG)
 ##### 3) Нажал ctrl+x, подгрузилась система
-- [bin-bash2.JPG]
+- ![bin-bash2.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/bin-bash2.JPG)
 ##### 4) Примонтировал корневую файловую систему с правами на запись командой "mount -rw -o remount /"
 ##### 5) Командой passwd поменял пароль на root
-- [bin-bash3.JPG]
+- ![bin-bash3.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/bin-bash3.JPG)
 ##### 6) Проверил после перезагрузки, пароль успешно заменен
 ##### Прилагаю скриншоты из окна Proxmox в тексте выше
 
 ##### 
 ##### Второй способ с использованием Live CD. Использовал Live CD Rescue Alt, на Alt Server 10
 ##### 1) Загружаемся с СиДиРома
-- [Rescue0.JPG]
+- ![Rescue0.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/Rescue0.JPG)
 ##### 2) Смонтировал раздел в /mnt/system1/
-- [Rescue1.JPG]
+- ![Rescue1.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/Rescue1.JPG)
 ##### 3) chroot /mnt/system1/
 ##### 4) Командой passwd сменил пароль на root
-- [Rescue2.JPG]
+- ![Rescue2.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/Rescue2.JPG)
 ##### 5) Проверил после перезагрузки, пароль успешно заменен
 ##### Прилагаю скриншоты из окна Proxmox в тексте выше
 
@@ -50,7 +50,7 @@
 
 ##### Перезагружаемся и проверям... иии упс, не загружается, граб не пересобрал после смены имени VG
 ##### Загрузился с лайвСД, сделал chroot и сделал grub-mkconfig -o /boot/grub/grub.cfg
-- [renameVG.JPG]
+- ![renameVG.JPG](https://github.com/vilotiv/HomeWork/blob/main/DZ8/renameVG.JPG)
 
 ##### Перезагружаемся и проверям
 ``` 
@@ -227,7 +227,7 @@ test
 
 ##### В итоге при загрузке будет пауза на 10 секунд и вы увидите пингвина в выводе терминала
 
-- [ScreenshotSracut]
+- ![ScreenshotSracut](https://github.com/vilotiv/HomeWork/blob/main/DZ8/Screenshot_Dracut.png)
 
 ---
 
