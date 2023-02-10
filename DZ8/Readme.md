@@ -247,5 +247,68 @@ sdb                       8:16   0   10G  0 disk
 ```
 ##### Видим что boot находится на отдельном разделе sda2, корень и swap на VG.
 
-##### Далее планировал установить пропатченный граб https://yum.rumyantsev.com/centos/7/x86_64/ ... но нет, ссылка битая... как быть?
+### 4. Перемещаем /boot на LVM
+
+##### Вывод `lsblk` до перемещения раздела на LVM:
+```
+[root@education-tst ~]# lsblk
+NAME                   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda                      8:0    0   32G  0 disk
+├─sda1                   8:1    0    2G  0 part /boot
+├─sda2                   8:2    0 1023M  0 part [SWAP]
+└─sda3                   8:3    0   29G  0 part
+  ├─vg_newname-lg_home 253:0    0    5G  0 lvm  /home
+  └─vg_newname-lg_root 253:1    0   24G  0 lvm  /
+sr0                     11:0    1  565M  0 rom
+```
+#### Переносим файлы boot во временную директорию, делаем LVM и возвращаем назад файлы
+
+```sh
+[root@education-tst ~]# mkdir /newboot && rsync -av /boot/ /newboot/
+sent 76.131.592 bytes  received 6.243 bytes  30.455.134,00 bytes/sec
+total size is 76.090.674  speedup is 1,00
+[root@education-tst ~]# umount /boot/
+[root@education-tst ~]# pvcreate /dev/sda1
+[root@education-tst ~]# vgextend vg_newname /dev/sda1
+[root@education-tst ~]# lvcreate -L 0.99G -n boot vg_newname
+[root@education-tst ~]# lvs
+  LV      VG         Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  boot    vg_newname -wi-a-----  <1,91g
+  lg_home vg_newname -wi-ao----   5,00g
+  lg_root vg_newname -wi-ao---- <23,97g
+
+[root@education-tst ~]# mkfs.ext4 /dev/vg_newname/boot 
+[root@education-tst ~]# mount /dev/vg_newname/boot /boot
+[root@education-tst ~]# rsync -av /newboot/ /boot/
+[root@education-tst ~]# rm -rf /newboot/
+[root@education-tst ~]# mcedit /etc/fstab 
+```
+
+#### Заменим строчку в /etc/fstab с параметрами boot'а:
+
+```
+/dev/mapper/vg_newname-boot     /boot   ext4    nodev,nosuid,noexec,relatime,usrquota,grpquota  1       2
+```
+
+#### Добавим в параметры `grub`:
+```
+[root@education-tst ~]# echo 'GRUB_PRELOAD_MODULES="lvm"' | sudo tee -a /etc/default/grub
+[root@education-tst ~]# sed -i 's/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"dolvm /' /etc/default/grub
+[root@education-tst ~]# grub-install --recheck /dev/sda
+[root@education-tst ~]# grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+#### Вывод `lsblk` после перемещения раздела на LVM:
+```
+[root@education-tst ~]# lsblk
+NAME                   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda                      8:0    0   32G  0 disk
+├─sda1                   8:1    0    2G  0 part
+│ └─vg_newname-boot    253:2    0  1,9G  0 lvm  /boot
+├─sda2                   8:2    0 1023M  0 part [SWAP]
+└─sda3                   8:3    0   29G  0 part
+  ├─vg_newname-lg_home 253:0    0    5G  0 lvm  /home
+  └─vg_newname-lg_root 253:1    0   24G  0 lvm  /
+sr0                     11:0    1  565M  0 rom
+```
 
