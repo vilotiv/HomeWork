@@ -1,0 +1,151 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+home = ENV['HOME']
+ENV["LC_ALL"] = "en_US.UTF-8"
+
+MACHINES = {
+  :zfs => {
+        :box_name => "centos/7",
+        :ip_addr => '192.168.56.101',
+
+	:disks => {
+		:sata20 => {
+      :dfile => home + '/VirtualBox VMs/sata20.vdi',
+      :size => 10240,
+      :port => 1
+  },
+  :sata21 => {
+      :dfile => home + '/VirtualBox VMs/sata21.vdi',
+      :size => 10240, # Megabytes
+      :port => 2
+  }
+
+	}
+  },
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+      config.vm.define boxname do |box|
+
+          box.vm.box = boxconfig[:box_name]
+          box.vm.host_name = boxname.to_s
+          box.vm.network "private_network", ip: boxconfig[:ip_addr]
+          box.vm.provider :virtualbox do |vb|
+            	  vb.customize ["modifyvm", :id, "--memory", "2048"]
+                  needsController = false
+		  boxconfig[:disks].each do |dname, dconf|
+			  unless File.exist?(dconf[:dfile])
+				vb.customize ['createhd', '--filename', dconf[:dfile], '--variant', 'Fixed', '--size', dconf[:size]]
+                                needsController =  true
+                          end
+
+		  end
+                  if needsController == true
+                     vb.customize ["storagectl", :id, "--name", "SATA", "--add", "sata" ]
+                     boxconfig[:disks].each do |dname, dconf|
+                         vb.customize ['storageattach', :id,  '--storagectl', 'SATA', '--port', dconf[:port], '--device', 0, '--type', 'hdd', '--medium', dconf[:dfile]]
+                     end
+                  end
+          end
+ 	  box.vm.provision "shell", inline: <<-SHELL
+     mkdir -p ~root/.ssh
+     cp ~vagrant/.ssh/auth* ~root/.ssh
+     echo -e "\n\n-----------------------------------------------"
+     echo -e "Определение алгоритма с наилучшим сжатием\n\n"
+     echo -e "\nУстановим необходимые программы...(займёт некоторое время)"
+     yum install -y -q http://download.zfsonlinux.org/epel/zfs-release.el7_8.noarch.rpm > /dev/null 2>&1
+     #import gpg key 
+     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-zfsonlinux > /dev/null 2>&1
+     #install DKMS style packages for correct work ZFS
+     yum install -y epel-release kernel-devel zfs > /dev/null 2>&1
+     #change ZFS repo
+     yum-config-manager --disable zfs > /dev/null 2>&1
+     yum-config-manager --enable zfs-kmod > /dev/null 2>&1
+     yum install -y zfs > /dev/null 2>&1
+     #Add kernel module zfs
+     modprobe zfs > /dev/null 2>&1
+     #install wget
+     yum install -y wget > /dev/null 2>&1
+     echo -e "\nСоздадим mirror pool из дисков sdb и sdc"
+     zpool create mypool mirror /dev/sdb /dev/sdc
+     zpool list
+     echo "Создадим файловые системы с разным сжатием"
+     zfs create -o compression=off mypool/dir_off
+     zfs create -o compression=lzjb mypool/dir_lzjb
+     zfs create -o compression=gzip mypool/dir_gzip
+     zfs create -o compression=zle mypool/dir_zle
+     zfs get compression
+     echo -e "\nСкачаем для теста книгу А.Толстого и скопируем ее в разные файловые системы"
+     echo "Скачиваем..."
+     wget -O War_and_Peace.txt http://www.gutenberg.org/ebooks/2600.txt.utf-8
+     echo "Копируем в директорию без сжатия..."
+     cp /home/vagrant/War_and_Peace.txt /mypool/dir_off
+     echo "Копируем в директорию со сжатием gzip.."
+     cp /home/vagrant/War_and_Peace.txt /mypool/dir_gzip
+     echo "Копируем в директорию со сжатием lzjb.."
+     cp /home/vagrant/War_and_Peace.txt /mypool/dir_lzjb
+     echo "Копируем в директорию со сжатием zle.."
+     cp /home/vagrant/War_and_Peace.txt /mypool/dir_zle
+     echo -e "\nPlease Wait...:"
+     sleep 5
+     echo -e "\nСравним используемый объем после копирования:"
+     zfs list
+     echo -e "\nСравним компрессию:"
+     zfs get compressratio
+     sleep 5
+     echo -e "\n\n-----------------------------------------------"
+     echo -e "Определяем настройки pool’a\n\n"
+     echo "Скачиваем архив с google drive..."
+     wget -O task2.tar.gz https://drive.google.com/u/0/uc?id=1KRBNW33QWqbvbVHa3hLJivOAt60yukkg
+     cd /home/vagrant && tar -zxvf task2.tar.gz
+     echo -e "\nПробуем импортировать пул..."
+     sudo zpool import -d /home/vagrant/zpoolexport/
+     echo -e "\nСмонтируем."
+     sudo zpool import -d /home/vagrant/zpoolexport/ otus
+     echo -e "Общая информация"
+     echo -e "\n\n-----------------------------------------------"
+    zpool list otus
+    echo -e "\n\n-----------------------------------------------"
+    zfs get recordsize otus
+    echo -e "\n\n-----------------------------------------------"
+    zfs get compression otus
+    echo -e "\n\n-----------------------------------------------"
+    zfs get checksum otus
+    echo -e "\n\n-----------------------------------------------"
+     echo -e "\nРазмер хранилища: `zpool list -H -o size otus`"
+     echo "Тип пула: `zpool list -v -H -P otus|head -n2|tail -n1|awk '{print $1}'`"
+     echo "Recordsize: `zfs get -H -o value recordsize otus`"
+     echo "Compression: `zfs get -H -o value compression otus`"
+     echo "Checksum: `zfs get -H -o value checksum otus`"
+     sleep 5
+     echo -e "\n\n-----------------------------------------------"
+     echo -e "Найти сообщение от преподавателей\n\n"
+     echo "Скачиваем файл.."
+     wget -O otus_task2.file https://drive.google.com/u/0/uc?id=1gH8gCL9y7Nd5Ti3IRmplZPF1XjzxeRAG
+     echo -e "Восстановим полученный файл.. "
+     cat otus_task2.file | sudo zfs recv -F mypool/task3
+     echo "\nВыведем сообщение из файла:\n"
+     cat `find /mypool/task3/ -name "secret_message"`
+     echo "< Все задания выполнены. Спасибо за проверку! >"
+     echo " -------------------"
+     echo "   '\' "
+     echo "    '\' " 
+     echo "        .--."
+     echo "       |o_o |"
+     echo "       |:_/ |"
+     echo "      //   '\ \' "
+     echo "     (|     | )"
+     echo "'    /'\_   _/'\ '"
+     echo "'    '\'___)=(___/'"
+   
+
+   
+     SHELL
+
+      end
+  end
+end
