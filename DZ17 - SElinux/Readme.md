@@ -448,9 +448,11 @@ libsemanage.semanage_direct_remove_key: Removing last nginx module (no other ngi
    
 <details>
 <summary>
-Скачиваем данные из репозитория git clone https://github.com/mbfx/otus-linux-adm.git
+Скачиваем данные из репозитория git otus-linux-adm.git
 </summary>
+
 ```
+
 vilotiv@vilotiv-leg:/vagrantVM$ git clone https://github.com/mbfx/otus-linux-adm.git
 Клонирование в «otus-linux-adm»...
 remote: Enumerating objects: 558, done.
@@ -468,10 +470,10 @@ vilotiv@vilotiv-leg:/vagrantVM/otus-linux-adm$ cd selinux_dns_problems/
 
 vilotiv@vilotiv-leg:/vagrantVM/otus-linux-adm/selinux_dns_problems$ vagrant up
 Bringing machine 'ns01' up with 'virtualbox' provider...
-Bringing machine 'client' up with 'virtualbox' provider...
-==> ns01: Importing base box 'centos/7'...
+Bringing machine client up with virtualbox provider...
+==> ns01: Importing base box centos/7...
 ==> ns01: Matching MAC address for NAT networking...
-==> ns01: Checking if box 'centos/7' version '2004.01' is up to date...
+==> ns01: Checking if box centos/7 version 2004.01 is up to date...
 ==> ns01: There was a problem while downloading the metadata for your box
 ==> ns01: to check for updates. This is not an error, since it is usually due
 ==> ns01: to temporary network problems. This is just a warning. The problem
@@ -489,7 +491,7 @@ Bringing machine 'client' up with 'virtualbox' provider...
     ns01: Adapter 2: intnet
 ==> ns01: Forwarding ports...
     ns01: 22 (guest) => 2200 (host) (adapter 1)
-==> ns01: Running 'pre-boot' VM customizations...
+==> ns01: Running pre-boot VM customizations...
 ==> ns01: Booting VM...
 ==> ns01: Waiting for machine to boot. This may take a few minutes...
     ns01: SSH address: 127.0.0.1:2200
@@ -576,9 +578,9 @@ skipping: no hosts matched
 PLAY RECAP *********************************************************************
 ns01                       : ok=14   changed=12   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
-==> client: Importing base box 'centos/7'...
+==> client: Importing base box centos/7...
 ==> client: Matching MAC address for NAT networking...
-==> client: Checking if box 'centos/7' version '2004.01' is up to date...
+==> client: Checking if box centos/7 version 2004.01 is up to date...
 ==> client: Setting the name of the VM: selinux_dns_problems_client_1678379791241_97309
 ==> client: Fixed port collision for 22 => 2222. Now on port 2201.
 ==> client: Clearing any previously set network interfaces...
@@ -587,7 +589,7 @@ ns01                       : ok=14   changed=12   unreachable=0    failed=0    s
     client: Adapter 2: intnet
 ==> client: Forwarding ports...
     client: 22 (guest) => 2201 (host) (adapter 1)
-==> client: Running 'pre-boot' VM customizations...
+==> client: Running pre-boot VM customizations...
 ==> client: Booting VM...
 ==> client: Waiting for machine to boot. This may take a few minutes...
     client: SSH address: 127.0.0.1:2201
@@ -657,10 +659,14 @@ client                    running (virtualbox)
 This environment represents multiple VMs. The VMs are all listed
 above with their current state. For more information about a specific
 VM, run vagrant status NAME.
-```  
+
+```
+
 </details> 
   
-Запускаем наши виртуальные машины, подключаемся к клиентской машине и пробуем внести изменения в зону. Изменить не получилось( Смотрим логи selinux с помощью утилиты audit2why, чтобы понять источник проблемы. На клиенте ошибок нет:
+Запускаем наши виртуальные машины, подключаемся к клиентской машине и пробуем внести изменения в зону. 
+Изменить не получается
+В логах selinux с помощью утилиты audit2why на клиенте ошибок не находим:
   ```
   vilotiv@vilotiv-leg:/vagrantVM/otus-linux-adm/selinux_dns_problems$ vagrant ssh client
 Last login: Thu Mar  9 16:39:10 2023 from 10.0.2.2
@@ -698,7 +704,7 @@ audispd      audit2allow  audit2why    auditctl     auditd
 [root@client ~]# cat /var/log/audit/audit.log | audit2why
   ```
   
-  Видим что на клиенте ошибки отсутствуют. Теперь, не закрывая сессию в клиенте переходим к серверу ns01: vagrant ssh ns01 и проверим логи SELinux
+  Не закрывая сессии в клиенте переходим к серверу ns01: vagrant ssh ns01 и проверим логи SELinux
 
   ```
   vagrant ssh ns01
@@ -726,7 +732,7 @@ drw-rwx---. root named unconfined_u:object_r:etc_t:s0   dynamic
 -rw-rw----. root named system_u:object_r:etc_t:s0       named.newdns.lab
   ```
   
-  Тут мы также видим, что контекст безопасности неправильный. Проблема заключается в том, что конфигурационные файлы лежат в другом каталоге. Посмотреть в каком каталоге должны лежать файлы, чтобы на них распространялись правильные политики SELinux можно с помощью команды: sudo semanage fcontext -l | grep named_zone_
+  Тут мы также видим, что контекст безопасности неправильный. Проблема заключается в том, что конфигурационные файлы лежат в другом каталоге. Посмотреть в каком каталоге должны лежать файлы, чтобы на них распространялись правильные политики SELinux можно с помощью команды: sudo semanage fcontext -l | grep named_zone_t
   ```
   [root@ns01 ~]# semanage fcontext -l | grep named_zone_t
 /var/named(/.*)?                                   all files          system_u:object_r:named_zone_t:s0 
