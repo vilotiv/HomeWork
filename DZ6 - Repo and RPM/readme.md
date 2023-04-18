@@ -48,7 +48,7 @@ rpm пакет собран.
     cat <<'EOF' | sudo tee /etc/yum.repos.d/my.repo
     [myrepo-x86_64]
     name=my repo
-    baseurl=/usr/share/nginx/html/repos/x86_64
+    baseurl=file:///usr/share/nginx/html/repos/x86_64
     enabled=1
     gpgcheck=0
     EOF
@@ -63,7 +63,7 @@ rpm пакет собран.
     sudo systemctl enable --now nginx.service
     systemctl status nginx.service
 ##### Поменяем файл репозитория с локального на сетевой
-    sudo sed -i 's%/usr/share/nginx/html/repos/x86_64%http://192.168.56.155/repos/x86_64/%' /etc/yum.repos.d/my.repo
+    sudo sed -i 's%file:///usr/share/nginx/html/repos/x86_64%http://192.168.56.156/repos/x86_64/%' /etc/yum.repos.d/my.repo
 ##### Проверим репозиторий командой
     yum repoinfo "my repo"
 
