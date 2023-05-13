@@ -1,0 +1,2 @@
+2023/03/15 15:39:22 [error] 3882#3882: *5 open() "/usr/share/nginx/html/favicon.ico" failed (2: No such file or directory), client: 192.168.56.1, server: default_server, request: "GET /favicon.ico HTTP/1.1", host: "192.168.56.150:8080", referrer: "http://192.168.56.150:8080/"
+2023/03/15 15:39:32 [error] 3882#3882: *5 open() "/usr/share/nginx/html/index.php" failed (2: No such file or directory), client: 192.168.56.1, server: default_server, request: "GET /index.php HTTP/1.1", host: "192.168.56.150:8080"
